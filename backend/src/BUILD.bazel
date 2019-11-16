@@ -1,0 +1,17 @@
+load(
+    "@rules_haskell//haskell:defs.bzl",
+    "haskell_test",
+    "haskell_toolchain_library",
+    "haskell_library",
+)
+
+haskell_toolchain_library(name = "base")
+
+haskell_library(
+    name = "lib",
+    srcs = ["Lib.hs"],
+    compiler_flags = ["-threaded"],
+    deps = [
+        ":base",
+    ],
+)

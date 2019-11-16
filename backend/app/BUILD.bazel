@@ -1,0 +1,24 @@
+load(
+    "@rules_haskell//haskell:defs.bzl",
+    "haskell_test",
+    "haskell_library",
+    "haskell_binary",
+    "haskell_toolchain_library",
+)
+
+load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl", "nixpkgs_git_repository", "nixpkgs_package")
+
+haskell_toolchain_library(
+    name = "base_pkg",
+    package = "base",
+)
+
+haskell_library(
+    name = "backend_main",
+    srcs = ["Main.hs"],
+    compiler_flags = ["-threaded"],
+    deps = [
+        ":base_pkg",
+        "//lib:lib",
+    ],
+)
