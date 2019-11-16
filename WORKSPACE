@@ -22,4 +22,34 @@ http_archive(
 
 load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl", "nixpkgs_git_repository", "nixpkgs_package")
 
-nixpkgs_package(name = "ghc")
+nixpkgs_git_repository(
+    name = "nixpkgs",
+    revision = "19.09", # Any tag or commit hash
+)
+
+load(
+    "@rules_haskell//haskell:nixpkgs.bzl",
+    "haskell_register_ghc_nixpkgs",
+)
+
+haskell_register_ghc_nixpkgs(
+    version = "8.6.5", # Any GHC version
+    attribute_path = "ghc", # The Nix attribute path to the compiler.
+    repositories = {"nixpkgs": "@nixpkgs"},
+)
+
+#nixpkgs_package(
+#  name = "ghc",
+#  repositories = {"nixpkgs": "@nixpkgs"},
+#)
+#
+#load(
+#    "@rules_haskell//haskell:defs.bzl",
+#    "haskell_test",
+#    "haskell_library",
+#    "haskell_binary",
+#    "haskell_toolchain_library",
+#    "haskell_register_ghc_bindists",
+#)
+#
+#register_toolchains("//backend/app:ghc")

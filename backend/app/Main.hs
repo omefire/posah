@@ -1,6 +1,7 @@
 module Main where
 
-import Lib
+--import Lib
 
 main :: IO ()
-main = startApp
+main = --startApp
+    putStrLn "Testing 1, 2, 3"
