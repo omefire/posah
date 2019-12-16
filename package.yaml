@@ -25,6 +25,10 @@ dependencies:
 - http-types
 - aeson
 - text
+- validation
+- lens
+- transformers
+- MissingH
 
 library:
   source-dirs: src
