@@ -29,6 +29,13 @@ dependencies:
 - lens
 - transformers
 - MissingH
+- secp256k1-haskell
+- bytestring
+- asn1-encoding
+- asn1-types
+- base16-bytestring
+- string-conversions
+- base64-bytestring
 
 library:
   source-dirs: src

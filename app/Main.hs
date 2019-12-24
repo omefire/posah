@@ -15,7 +15,7 @@ import Types.User
 import Control.Monad.Trans.Except(ExceptT(..))
 import Data.Validation
 
-
+-- ToDO: Use SSL/TLS to enhance security/privacy
 main = (flip catch) handler $ scottyT 3000 id $ do
 
   defaultHandler handleAppExceptions
@@ -46,4 +46,3 @@ main = (flip catch) handler $ scottyT 3000 id $ do
         _ <- liftAndCatchIO $ putStrLn "Test" --createNewUser userRegistrationInfo
         Web.Scotty.Trans.json newUser)
       (validateUserRegistrationInfo incomingUserRegistrationInfo)
-      -- newUser <- liftAndCatchIO $ createNewUser userRegistrationInfo
