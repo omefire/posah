@@ -36,6 +36,7 @@ dependencies:
 - base16-bytestring
 - string-conversions
 - base64-bytestring
+- cryptohash-sha256
 
 library:
   source-dirs: src

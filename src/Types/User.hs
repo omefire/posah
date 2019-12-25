@@ -31,6 +31,9 @@ import Data.ASN1.BinaryEncoding
 import Data.ASN1.Types
 import Crypto.Secp256k1
 import Data.String.Conversions   (ConvertibleStrings, cs)
+import Crypto.Secp256k1.Internal
+import qualified Crypto.Hash.SHA256 as SHA256
+import System.IO.Unsafe (unsafePerformIO)
 
 
 data DigitalSignature = DigitalSignature {
@@ -42,8 +45,6 @@ instance FromJSON DigitalSignature
 instance ToJSON DigitalSignature
 
 data UserRegistrationInfo = UserRegistrationInfo {
-    -- userRegistrationInfoPublicKey :: String,
-    -- userRegistrationInfoDigitalSignature :: String,
     userRegistrationPhoneNumber :: String,
     userRegistrationFirstName :: String,
     userRegistrationLastName :: String,
@@ -57,7 +58,7 @@ type FieldName = String
 data UserRegistrationInfoValidationError = MustNotBeEmpty FieldName | MustNotContainPunctuation FieldName | InvalidPhoneNumber FieldName PhoneNumberError
                                            | InvalidPublicKey FieldName | InvalidPublicKeyOrPrivateKey FieldName FieldName
                                            | InvalidSignature FieldName | CouldNotGetSignature FieldName
-                                           | MessageSignatureInvalid FieldName
+                                           | MessageSignatureInvalid FieldName | CouldNotGetMessage FieldName
 
 instance Show UserRegistrationInfoValidationError where
     show ( MustNotBeEmpty fieldName ) = "The '" ++ fieldName ++ "' must not be empty"
@@ -70,6 +71,7 @@ instance Show UserRegistrationInfoValidationError where
     show ( InvalidSignature fieldName ) = "The '" ++ fieldName ++ "' is an invalid signature"
     show ( CouldNotGetSignature fieldName ) = "The '" ++ fieldName ++ "' could not be gotten"
     show ( MessageSignatureInvalid fieldName ) = "The '" ++ fieldName ++ "' is an invalid signature"
+    show ( CouldNotGetMessage fieldName ) = "The '" ++ fieldName ++ "' could not be gotten"
 
 mustNotBeEmpty :: FieldName -> String -> Validation [UserRegistrationInfoValidationError] String
 mustNotBeEmpty fieldName value = if value /= []
@@ -92,8 +94,6 @@ validateUserRegistrationInfo uinfo = pure uinfo <*
                          mustNotBeEmpty "Public Key" ((dsigPublicKey . digitalSignature) uinfo) <*
                          isPhoneNumberValid "Phone Number" ((userRegistrationPhoneNumber) uinfo) <*
                          validateSignature "Public Key" "Digital Signature" uinfo
-                         -- isPublicKeyValid "Public Key" ((fromString . dsigPublicKey . digitalSignature) uinfo)
-                         -- isSignatureValid "Public Key" "Signature" (getPublicKey uinfo) (getSig uinfo) (Types.User.getMsg uinfo)
 
 --- Phone Number Validation ---
 
@@ -120,7 +120,7 @@ isPhoneNumberValid fieldName value = let phNumber = strip value
                                         phoneNumberMustStartWith6 fieldName phNumber
 
 
---- Public Key Infrastructure Validation ---
+--- Public Key & Signature Validation ---
 
 validateSignature :: FieldName 
                      -> FieldName 
@@ -136,7 +136,8 @@ validateSignature pubKeyFieldName sigFieldName uinfo =
         sig <- getSig "Digital Signature" sigStr
         msg <- getMsg "Message" msgStr
 
-        if (verifySig pk sig msg) then Right sig 
+        -- if (trace "verifySig" (verifySig pk sig msg) ) then Right sig 
+        if (verifySig pk sig msg) then Right sig
         else Left $ [InvalidSignature sigFieldName]
 
     where
@@ -152,19 +153,35 @@ validateSignature pubKeyFieldName sigFieldName uinfo =
         getSig fieldName sigStr = 
             let mbs = importSig (fst $ B16.decode $ BS8.pack sigStr)
             in case mbs of
-              Nothing -> Left [(InvalidSignature fieldName)]
+              Nothing -> Left [(CouldNotGetSignature fieldName)]
               Just sig -> Right sig
 
-        getMsg :: FieldName -> String -> Either [UserRegistrationInfoValidationError] Msg
-        getMsg fieldName msgStr = error "getMsg"
+        getMsg :: (FromJSON a, ToJSON a) => FieldName -> a -> Either [UserRegistrationInfoValidationError] Msg
+        getMsg fieldName payload = -- Payload is the json object coming from the wire
+            let payloadSha256 = SHA256.hash $ (BSL.toStrict . encode) payload -- First convert the JSON encoding of the message to sha256
+            in case (msg . fst . B16.decode . B16.encode) payloadSha256 of
+                Nothing -> Left [CouldNotGetMessage fieldName]
+                Just m -> Right m
 
-
--- Exple public key:
--- 04dded4203dac96a7e85f2c374a37ce3e9c9a155a72b64b4551b0bfe779dd4470512213d5ed790522c042dee8e85c4c0ec5f96800b72bc5940c8bc1c5e11e4fcbf
-
--- >> createnewaddress()
--- "3GtVqYDKWbxMY3BxeZJPszYfpUAnu6xFkP"
--- >> signmessage("3GtVqYDKWbxMY3BxeZJPszYfpUAnu6xFkP", "test")
--- "H65VvmPa8nPN396VyfoTvhRs26A7v2ZfJj+DMz5u1pIdeuh30AsM6tUCWuIagByVhO6N+C/iGWkd7dIAZhDpVAA="
 
 -- https://davidederosa.com/basic-blockchain-programming/elliptic-curve-digital-signatures/
+
+-- Generate private key: $ openssl ecparam -name secp256k1 -genkey -out ec-priv.pem
+-- Generate public key: $ openssl ec -in ec-priv.pem -pubout -out ec-pub.pem
+-- Sign Message & encode it in hex: openssl dgst -sha256 -hex -sign ec-priv.pem ex-message.txt
+-- Use the hex in JSON:
+-- {
+-- 	"userRegistrationPhoneNumber": "699873018",
+-- 	"userRegistrationFirstName": "Omar",
+-- 	"userRegistrationLastName": "Mefire",
+-- 	
+-- 	"digitalSignature": {
+-- 		"dsigSignature": "30440220511baa8f7035e658810b20bbe8f964a7f556336b8dba31e0dea516ea835e6a1f02203ed189d1b4c0893b907a8159b10a4f2c95d0d7b7e85a60e0414cfe80afb0dab8",
+-- 		"dsigPublicKey": "0202a406624211f2abbdc68da3df929f938c3399dd79fac1b51b0e4ad1d26a47aa"
+-- 	}
+-- }
+
+-- 03ed916094056733141774e5b79ab48dec70c57c6c6d423e34db24038334e01c
+-- f5cbe7d88182a4b8e400f96b06128921864a18187d114c8ae8541b566c8ace00
+-- msg = Msg32 $ toShort $ fst $ B16.decode
+--         "f5cbe7d88182a4b8e400f96b06128921864a18187d114c8ae8541b566c8ace00"
