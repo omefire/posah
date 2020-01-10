@@ -37,6 +37,9 @@ dependencies:
 - string-conversions
 - base64-bytestring
 - cryptohash-sha256
+- wai
+- utf8-string
+- blaze-builder
 
 library:
   source-dirs: src

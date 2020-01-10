@@ -51,7 +51,7 @@ module Exception.Handling (
     handler,
     handleAppExceptions,
     ExceptionCode,
-    ServerException(RegistrationInfoInvalid)
+    ServerException(RegistrationInfoInvalid, AuthenticationException)
 ) where
 import GHC.Exception.Type
 import GHC.IO (throwIO)
@@ -76,6 +76,7 @@ data ServerException =
   InternalServerException ExceptionCode String -- ExceptionCode = 1500 -- Used when we don't know what specific application-exception to use
   | UserAlreadyRegisteredException ExceptionCode String -- ExceptionCode = 1501
   | RegistrationInfoInvalid ExceptionCode [String] -- ExceptionCode = 1502
+  | AuthenticationException ExceptionCode [String] -- ExceptionCode = 1503
     deriving (Show, Eq, Generic)
 
 instance ToJSON ServerException where
@@ -91,6 +92,11 @@ instance ToJSON ServerException where
   
   toJSON (RegistrationInfoInvalid exCode exMsgs) = object [
     "exceptionType" .= ("RegistrationInfoInvalid" :: String),
+    "exceptionCode" .= exCode,
+    "exceptionMessage" .= exMsgs]
+
+  toJSON (AuthenticationException exCode exMsgs) = object [
+    "exceptionType" .= ("AuthenticationException" :: String),
     "exceptionCode" .= exCode,
     "exceptionMessage" .= exMsgs]
 
