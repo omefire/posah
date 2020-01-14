@@ -43,6 +43,11 @@ packages:
 #extra-deps:
 #- scotty
 
+extra-deps:
+#- safe-globals-0.1.1@sha256:f2084402e30a15077745b534430a410c4379e9f1893fa4a02aa43954e57d059f,2307
+- git: https://github.com/fortlogic/safe-globals.git
+  commit: 464a31e1451f31c6865712a225b82f1933800585
+
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

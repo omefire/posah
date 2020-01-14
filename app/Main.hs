@@ -21,6 +21,13 @@ import GHC.Generics
 
 import Middleware.Authentication
 
+import Control.Concurrent
+import System.IO.Unsafe
+import Control.Monad.IO.Class
+
+import Data.IORef
+
+
 -- | ToDO: Use SSL/TLS to enhance security/privacy
 main = (flip catch) handler $ scottyT 3000 id $ do
 
@@ -65,6 +72,10 @@ main = (flip catch) handler $ scottyT 3000 id $ do
     -- _ <- error "registerUser"
     -- let result = Data.Aeson.decode body :: Maybe Object
     -- _ <- liftIO $ putStrLn (show result)
+    -- payload :: UserRegistrationInfo <- liftIO retrievePayload
+    (Object payload) <- liftIO $ readIORef payloadIORef -- payload is of type: Hashmap Text Value
+    let registrationInfo = 
+
     userReq :: UserReq UserRegistrationInfo <- jsonData
     let registrationInfo = (payload userReq)
     validation

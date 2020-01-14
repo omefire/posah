@@ -3,7 +3,21 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    cabal-file:
+      size: 2307
+      sha256: 199ef1fa3383e3904ffa8d1a5a9484857597cbde1de56cd2b6c4f97036e02a11
+    name: safe-globals
+    version: 0.2.0
+    git: https://github.com/fortlogic/safe-globals.git
+    pantry-tree:
+      size: 553
+      sha256: aadb62a0a70b257fa01e9f577def1f098e5134e03868b9ed5d6571fa2b5fa1dd
+    commit: 464a31e1451f31c6865712a225b82f1933800585
+  original:
+    git: https://github.com/fortlogic/safe-globals.git
+    commit: 464a31e1451f31c6865712a225b82f1933800585
 snapshots:
 - completed:
     size: 524804

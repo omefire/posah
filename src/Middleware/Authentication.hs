@@ -5,7 +5,8 @@
 module Middleware.Authentication (
     validateDigitalSignature,
     UserReqAuth(..),
-    UserReq(..)
+    UserReq(..),
+    payloadIORef
 ) where
 
 import Types.User
@@ -29,6 +30,10 @@ import Exception.Handling
 import Debug.Trace
 import Data.Validation
 import Control.Lens
+import Control.Concurrent
+import Data.IORef
+-- import Data.Global
+import System.IO.Unsafe (unsafePerformIO)
 
 
 data UserReq payload = UserReq {
@@ -53,6 +58,19 @@ data UserReq payload = UserReq {
 --   . fromEncoding . toEncoding
 --   
 
+
+-- Note: Since the introduction of the digital signature validating middleware,
+--       we carry out the parsing of the request body and retrieval of its json content
+--       in the middleware. Which means that once we reach the handler function (i.e `post "/registerUser" ... `) stage,
+--       it is not possible to parse the request body anymore.
+--       Thus, we need a way to pass the result of the parsing from the middleware to the handler function.
+--       Unfortunately, I can't think of a cleaner way to do it than to use a global/top mutable variable.
+
+-- declareIORef "payloadIORef" [t| Value |] [e| Null  |]
+-- declareIORef "payloadIORef" [t| Char |] [e| 'x' |]
+payloadIORef :: IORef Value
+payloadIORef = unsafePerformIO (newIORef Null)
+
 jsonResponse :: ToJSON a => a -> Response
 jsonResponse
     = responseBuilder status200 [("Content-Type","application/json")]
@@ -64,13 +82,21 @@ validateDigitalSignature app req respond = do -- IO ResponseReceived
     let body = BSL.fromChunks bodyChunks
     let authDetails = getAuthDetails body
     let payload = getPayload body
+    let payloadString = getPayloadString body
     case authDetails of
         Nothing -> respond $ jsonResponse $ AuthenticationException 1503 $ ["No public key or digital signature was provided in the request"]
         Just auth ->
             validation
                 (\errors -> respond $ jsonResponse $ AuthenticationException 1503 $ Prelude.map show errors) -- ToDO: Writing error code 1502 can lead to mistakes on the part of devs
-                (\sig -> app req respond)
-                (validateSignature "Public Key" "Digital Signature" auth payload)
+                (\sig -> do
+                    case payload of
+                        Nothing -> error "This should NOT happen"
+                        Just pyld -> do
+                            -- Note: This line writes the IORef created by a `declareIORef` (safe-globals library) at the top level.
+                            _ <- writeIORef payloadIORef (Object pyld)
+                            return ()
+                    app req respond)
+                (validateSignature "Public Key" "Digital Signature" auth payloadString)
 
     where
 
@@ -90,13 +116,26 @@ validateDigitalSignature app req respond = do -- IO ResponseReceived
                 return $ UserReqAuth { public_key = public_key, digital_signature = digital_signature }
             return authDetails
 
-        getPayload :: BSL.ByteString -> Maybe String
+        -- getPayload :: BSL.ByteString -> Maybe String
+        -- getPayload body = do
+        --     result <- Data.Aeson.decode body :: Maybe Object
+        --     payloadDetails <- flip parseMaybe result $ \obj -> do
+        --         payload <- obj .: "payload" :: Parser Object
+        --         return payload
+        --     return $ BS8.unpack $ BSL.toStrict $ Data.Aeson.encode payloadDetails
+
+        getPayload :: BSL.ByteString -> Maybe Object
         getPayload body = do
             result <- Data.Aeson.decode body :: Maybe Object
-            payloadDetails <- flip parseMaybe result $ \obj -> do
+            flip parseMaybe result $ \obj -> do
                 payload <- obj .: "payload" :: Parser Object
                 return payload
-            return $ BS8.unpack $ BSL.toStrict $ Data.Aeson.encode payloadDetails
+            
+
+        getPayloadString :: BSL.ByteString -> Maybe String
+        getPayloadString body = do
+            payload <- getPayload body
+            return $ BS8.unpack $ BSL.toStrict $ Data.Aeson.encode payload
 
 --- Public Key & Signature Validation ---
 
@@ -146,8 +185,8 @@ validateSignature pubKeyFieldName sigFieldName userReqAuth (Just payload) =
 
         -- ToDO: Comment this out again!
         -- if (trace ("verifySig: " ++ (BS8.unpack $ B16.encode $ (exportSig sig)) ) (verifySig pk sig msg) ) then Right sig 
-        if (trace ("verifySig: " ++ show pk) (verifySig pk sig msg)) then Right sig
-        -- if (verifySig pk sig msg) then Right sig
+        --if (trace ("verifySig: " ++ show pk) (verifySig pk sig msg)) then Right sig
+        if (verifySig pk sig msg) then Right sig
         else Left $ [InvalidSignature sigFieldName]
 
     where
