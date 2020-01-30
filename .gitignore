@@ -1,1 +1,8 @@
 .stack-work
+package.yaml~
+requirements.txt
+stack.yaml~
+app/Main.hs~
+dig_sig/ecprivkey.pem
+dig_sig/ex-message.txt
+dig_sig/pub_priv_keys.txt
