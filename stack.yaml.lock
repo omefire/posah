@@ -3,7 +3,35 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    cabal-file:
+      size: 2307
+      sha256: 199ef1fa3383e3904ffa8d1a5a9484857597cbde1de56cd2b6c4f97036e02a11
+    name: safe-globals
+    version: 0.2.0
+    git: https://github.com/fortlogic/safe-globals.git
+    pantry-tree:
+      size: 553
+      sha256: aadb62a0a70b257fa01e9f577def1f098e5134e03868b9ed5d6571fa2b5fa1dd
+    commit: 464a31e1451f31c6865712a225b82f1933800585
+  original:
+    git: https://github.com/fortlogic/safe-globals.git
+    commit: 464a31e1451f31c6865712a225b82f1933800585
+- completed:
+    hackage: opaleye-0.6.7003.1@sha256:914ac99c6f7ceea050df843ac31c33be0f6340bc0f05753c8fdfc18074fa9e5b,5331
+    pantry-tree:
+      size: 4713
+      sha256: 2d7b23b291aa1961a79cac4079412b24644a7f0aa31ae45fd537051015a3a42f
+  original:
+    hackage: opaleye-0.6.7003.1@sha256:914ac99c6f7ceea050df843ac31c33be0f6340bc0f05753c8fdfc18074fa9e5b
+- completed:
+    hackage: opaleye-trans-0.5.1@sha256:b7b02aa71a7d7ea4d8623dfef50322c822c67973d0ddf4d35cc48626fd56ca59,1908
+    pantry-tree:
+      size: 417
+      sha256: f25327291fb0083f80df52c8be744121b58c9e18f3ae64889c3adfe2986cac5b
+  original:
+    hackage: opaleye-trans-0.5.1@sha256:b7b02aa71a7d7ea4d8623dfef50322c822c67973d0ddf4d35cc48626fd56ca59,1908
 snapshots:
 - completed:
     size: 524804

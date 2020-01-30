@@ -43,6 +43,13 @@ packages:
 #extra-deps:
 #- scotty
 
+extra-deps:
+#- safe-globals-0.1.1@sha256:f2084402e30a15077745b534430a410c4379e9f1893fa4a02aa43954e57d059f,2307
+- git: https://github.com/fortlogic/safe-globals.git
+  commit: 464a31e1451f31c6865712a225b82f1933800585
+- opaleye-0.6.7003.1@sha256:914ac99c6f7ceea050df843ac31c33be0f6340bc0f05753c8fdfc18074fa9e5b
+- opaleye-trans-0.5.1@sha256:b7b02aa71a7d7ea4d8623dfef50322c822c67973d0ddf4d35cc48626fd56ca59,1908
+
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

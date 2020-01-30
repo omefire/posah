@@ -25,6 +25,29 @@ dependencies:
 - http-types
 - aeson
 - text
+- validation
+- lens
+- transformers
+- MissingH
+- secp256k1-haskell
+- bytestring
+- asn1-encoding
+- asn1-types
+- base16-bytestring
+- string-conversions
+- base64-bytestring
+- cryptohash-sha256
+- wai
+- utf8-string
+- blaze-builder
+- unordered-containers
+- postgresql-simple
+- product-profunctors
+- opaleye
+- opaleye-trans
+- safe-exceptions
+- interpolate
+
 
 library:
   source-dirs: src
