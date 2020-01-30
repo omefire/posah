@@ -37,20 +37,12 @@ import Crypto.Secp256k1.Internal
 import qualified Crypto.Hash.SHA256 as SHA256
 import System.IO.Unsafe (unsafePerformIO)
 
-
--- data DigitalSignature = DigitalSignature {
---     dsigSignature  String,
---     dsigPublicKey  String
--- } deriving (Show, Eq, Generic)
--- 
--- instance FromJSON DigitalSignature
--- instance ToJSON DigitalSignature
-
 data UserRegistrationInfo = UserRegistrationInfo {
     userRegistrationFirstName  :: String,
     userRegistrationLastName :: String,
-    userRegistrationPhoneNumber :: String
-    -- , digitalSignature  DigitalSignature
+    userRegistrationEmail :: String,
+    userRegistrationPhoneNumber :: String,
+    userRegistrationPublicKey :: String
 } deriving (Show, Eq, Generic)
 
 instance FromJSON UserRegistrationInfo
@@ -58,9 +50,6 @@ instance ToJSON UserRegistrationInfo
 
 type FieldName = String
 data UserRegistrationInfoValidationError = MustNotBeEmpty FieldName | MustNotContainPunctuation FieldName | InvalidPhoneNumber FieldName PhoneNumberError
-                                           {- | InvalidPublicKey FieldName | InvalidPublicKeyOrPrivateKey FieldName FieldName
-                                           | InvalidSignature FieldName | CouldNotGetSignature FieldName
-                                           | MessageSignatureInvalid FieldName | CouldNotGetMessage FieldName -}
 
 instance Show UserRegistrationInfoValidationError where
     show ( MustNotBeEmpty fieldName ) = "The '" ++ fieldName ++ "' must not be empty"
@@ -68,12 +57,6 @@ instance Show UserRegistrationInfoValidationError where
     show ( InvalidPhoneNumber fieldName (PhoneNumberMustStartWith6) ) = "The '" ++ fieldName ++ "' must start with digit 6"
     show ( InvalidPhoneNumber fieldName (PhoneNumberMustBe9Digits) ) = "The '" ++ fieldName ++ "' must contain 9 digits"
     show ( InvalidPhoneNumber fieldName (PhoneNumberMustOnlyBeDigits) ) = "The '" ++ fieldName ++ "' must only contain digits"
-    -- show ( InvalidPublicKey fieldName ) = "The '" ++ fieldName ++ "' is invalid"
-    -- show ( InvalidPublicKeyOrPrivateKey pubKeyFieldName sigFieldName ) = " The '" ++ pubKeyFieldName ++ "' and/or '" ++ sigFieldName ++ "' is invalid"
-    -- show ( InvalidSignature fieldName ) = "The '" ++ fieldName ++ "' is an invalid signature"
-    -- show ( CouldNotGetSignature fieldName ) = "The '" ++ fieldName ++ "' could not be gotten"
-    -- show ( MessageSignatureInvalid fieldName ) = "The '" ++ fieldName ++ "' is an invalid signature"
-    -- show ( CouldNotGetMessage fieldName ) = "The '" ++ fieldName ++ "' could not be gotten"
 
 mustNotBeEmpty ::  FieldName -> String -> Validation [UserRegistrationInfoValidationError] String
 mustNotBeEmpty fieldName value = if value /= []
@@ -92,10 +75,7 @@ validateUserRegistrationInfo uinfo = pure uinfo <*
                          mustNotBeEmpty "First Name" (userRegistrationFirstName uinfo) <*
                          mustNotBeEmpty "Last Name"  (userRegistrationLastName uinfo) <*
                          mustNotBeEmpty "Phone Numer" (userRegistrationPhoneNumber uinfo) <*
-                         -- mustNotBeEmpty "Digital Signature" ((dsigSignature . digitalSignature) uinfo) <*
-                         -- mustNotBeEmpty "Public Key" ((dsigPublicKey . digitalSignature) uinfo) <*
                          isPhoneNumberValid "Phone Number" ((userRegistrationPhoneNumber) uinfo)
-                         -- validateSignature "Public Key" "Digital Signature" uinfo
 
 --- Phone Number Validation ---
 
@@ -138,7 +118,7 @@ isPhoneNumberValid fieldName value = let phNumber = strip value
 
 -- Generate private key $ openssl ecparam -name secp256k1 -genkey -out ec-priv.pem
 -- Generate public key $ openssl ec -in ec-priv.pem -pubout -out ec-pub.pem
--- Sign Message & encode it in hex openssl dgst -sha256 -hex -sign ec-priv.pem ex-message.txt
+-- Sign Message & encode it in hex: openssl dgst -sha256 -hex -sign ec-priv.pem ex-message.txt
 -- Use the hex in JSON
 -- {
 -- 	"userRegistrationPhoneNumber" "699873018",
@@ -163,3 +143,4 @@ isPhoneNumberValid fieldName value = let phNumber = strip value
 -- 04b94ab9111741a3b895f7cb73ecf1b959d533d616d2b2d74c57c41144b1384a39e0a40346d464f2120f86df75bce9af5b795c548edf11f0f6e8e08c3c7053f4a8
 
 -- 00a83974124a2af3c3497ec903c40a539489084b5f59a08529f6556e46513d6c6c
+

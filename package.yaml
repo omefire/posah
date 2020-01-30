@@ -40,6 +40,14 @@ dependencies:
 - wai
 - utf8-string
 - blaze-builder
+- unordered-containers
+- postgresql-simple
+- product-profunctors
+- opaleye
+- opaleye-trans
+- safe-exceptions
+- interpolate
+
 
 library:
   source-dirs: src

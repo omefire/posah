@@ -1,0 +1,144 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 6e282dfc1a6df333ddb4d63fb52cb535d3d9fce0ff42b58fc3c34d1babef6f2c
+
+name:           posah
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/posah#readme>
+homepage:       https://github.com/githubuser/posah#readme
+bug-reports:    https://github.com/githubuser/posah/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2019 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/posah
+
+library
+  exposed-modules:
+      DB.ConnectionInfo
+      DB.User
+      Exception.Handling
+      Middleware.Authentication
+      Types.User
+  other-modules:
+      Paths_posah
+  hs-source-dirs:
+      src
+  build-depends:
+      MissingH
+    , aeson
+    , asn1-encoding
+    , asn1-types
+    , base >=4.7 && <5
+    , base16-bytestring
+    , base64-bytestring
+    , blaze-builder
+    , bytestring
+    , cryptohash-sha256
+    , http-types
+    , interpolate
+    , lens
+    , opaleye
+    , opaleye-trans
+    , postgresql-simple
+    , product-profunctors
+    , safe-exceptions
+    , scotty
+    , secp256k1-haskell
+    , string-conversions
+    , text
+    , transformers
+    , unordered-containers
+    , utf8-string
+    , validation
+    , wai
+  default-language: Haskell2010
+
+executable posah-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_posah
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      MissingH
+    , aeson
+    , asn1-encoding
+    , asn1-types
+    , base >=4.7 && <5
+    , base16-bytestring
+    , base64-bytestring
+    , blaze-builder
+    , bytestring
+    , cryptohash-sha256
+    , http-types
+    , interpolate
+    , lens
+    , opaleye
+    , opaleye-trans
+    , posah
+    , postgresql-simple
+    , product-profunctors
+    , safe-exceptions
+    , scotty
+    , secp256k1-haskell
+    , string-conversions
+    , text
+    , transformers
+    , unordered-containers
+    , utf8-string
+    , validation
+    , wai
+  default-language: Haskell2010
+
+test-suite posah-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_posah
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      MissingH
+    , aeson
+    , asn1-encoding
+    , asn1-types
+    , base >=4.7 && <5
+    , base16-bytestring
+    , base64-bytestring
+    , blaze-builder
+    , bytestring
+    , cryptohash-sha256
+    , http-types
+    , interpolate
+    , lens
+    , opaleye
+    , opaleye-trans
+    , posah
+    , postgresql-simple
+    , product-profunctors
+    , safe-exceptions
+    , scotty
+    , secp256k1-haskell
+    , string-conversions
+    , text
+    , transformers
+    , unordered-containers
+    , utf8-string
+    , validation
+    , wai
+  default-language: Haskell2010

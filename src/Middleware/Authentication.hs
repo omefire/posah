@@ -34,7 +34,7 @@ import Control.Concurrent
 import Data.IORef
 -- import Data.Global
 import System.IO.Unsafe (unsafePerformIO)
-
+import Data.HashMap.Strict (empty)
 
 data UserReq payload = UserReq {
   auth :: UserReqAuth,
@@ -68,8 +68,8 @@ data UserReq payload = UserReq {
 
 -- declareIORef "payloadIORef" [t| Value |] [e| Null  |]
 -- declareIORef "payloadIORef" [t| Char |] [e| 'x' |]
-payloadIORef :: IORef Value
-payloadIORef = unsafePerformIO (newIORef Null)
+payloadIORef :: IORef Object
+payloadIORef = unsafePerformIO (newIORef empty)
 
 jsonResponse :: ToJSON a => a -> Response
 jsonResponse
@@ -90,12 +90,12 @@ validateDigitalSignature app req respond = do -- IO ResponseReceived
                 (\errors -> respond $ jsonResponse $ AuthenticationException 1503 $ Prelude.map show errors) -- ToDO: Writing error code 1502 can lead to mistakes on the part of devs
                 (\sig -> do
                     case payload of
-                        Nothing -> error "This should NOT happen"
+                        Nothing -> error "Invalid state. This should NOT happen"
                         Just pyld -> do
                             -- Note: This line writes the IORef created by a `declareIORef` (safe-globals library) at the top level.
-                            _ <- writeIORef payloadIORef (Object pyld)
-                            return ()
-                    app req respond)
+                            _ <- writeIORef payloadIORef pyld
+                            _ <- writeIORef publicKeyIORef (public_key authDetails)
+                            app req respond)
                 (validateSignature "Public Key" "Digital Signature" auth payloadString)
 
     where
@@ -116,14 +116,6 @@ validateDigitalSignature app req respond = do -- IO ResponseReceived
                 return $ UserReqAuth { public_key = public_key, digital_signature = digital_signature }
             return authDetails
 
-        -- getPayload :: BSL.ByteString -> Maybe String
-        -- getPayload body = do
-        --     result <- Data.Aeson.decode body :: Maybe Object
-        --     payloadDetails <- flip parseMaybe result $ \obj -> do
-        --         payload <- obj .: "payload" :: Parser Object
-        --         return payload
-        --     return $ BS8.unpack $ BSL.toStrict $ Data.Aeson.encode payloadDetails
-
         getPayload :: BSL.ByteString -> Maybe Object
         getPayload body = do
             result <- Data.Aeson.decode body :: Maybe Object
@@ -131,7 +123,6 @@ validateDigitalSignature app req respond = do -- IO ResponseReceived
                 payload <- obj .: "payload" :: Parser Object
                 return payload
             
-
         getPayloadString :: BSL.ByteString -> Maybe String
         getPayloadString body = do
             payload <- getPayload body
@@ -171,21 +162,16 @@ validateSignature :: (Show payload) =>
 validateSignature pubKeyFieldName sigFieldName userReqAuth Nothing = _Failure # [InexistentPayload "payload"]
 validateSignature pubKeyFieldName sigFieldName userReqAuth (Just payload) = 
     fromEither $ do
-        let pkStr  = public_key userReqAuth
-        let sigStr = digital_signature userReqAuth
         
-        -- ToDO: Put this back
-        -- let msgStr = show payload
-        let msgStr = "abc"
-
+        let pkStr  = trace ("public key: " ++ public_key userReqAuth) public_key userReqAuth
+        let sigStr = trace ("digital signature: " ++ digital_signature userReqAuth) digital_signature userReqAuth
+        
+        -- ToDO: Remove "abc"
+        let msgStr = "abc" -- trace ("payload/string that was signed by the client side: " ++ show payload) show payload
         pk  <- getPublicKey "Public Key" pkStr
         sig <- getSig "Digital Signature" sigStr
         msg <- getMsg "Message" msgStr
 
-
-        -- ToDO: Comment this out again!
-        -- if (trace ("verifySig: " ++ (BS8.unpack $ B16.encode $ (exportSig sig)) ) (verifySig pk sig msg) ) then Right sig 
-        --if (trace ("verifySig: " ++ show pk) (verifySig pk sig msg)) then Right sig
         if (verifySig pk sig msg) then Right sig
         else Left $ [InvalidSignature sigFieldName]
 
@@ -222,8 +208,3 @@ validateSignature pubKeyFieldName sigFieldName userReqAuth (Just payload) =
             in case (msg payloadSha256) of
                 Nothing -> Left [CouldNotGetMessage fieldName]
                 Just m -> Right m
-
-            -- let payloadSha256 = SHA256.hash $ BS8.pack payload
-            -- in case (msg . fst . B16.decode . B16.encode) payloadSha256 of
-            --     Nothing -> Left [CouldNotGetMessage fieldName]
-            --     Just m -> Right m
