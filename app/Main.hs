@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE QuasiQuotes #-}
+
 
 module Main where
 
@@ -16,7 +18,6 @@ import Types.User
 import Control.Monad.Trans.Except(ExceptT(..))
 import Data.Validation
 
-import Data.Aeson
 import GHC.Generics
 
 import Middleware.Authentication
@@ -27,6 +28,40 @@ import Control.Monad.IO.Class
 
 import Data.IORef
 
+import Data.Aeson.Types
+import Data.Aeson
+
+import DB.User
+import DB.ConnectionInfo as CI
+
+import qualified Database.PostgreSQL.Simple as PSQL
+import Data.String.Interpolate
+import qualified Data.ByteString.Char8 as BC
+
+
+-- ToDO:
+-- * Read connection details off of a credentials.json file
+-- * Use the connect function to create a ConnectionInfo object that will be returned to user
+--getConnectionInfo :: IO CI.ConnectionInfo
+--getConnectionInfo = do
+--  return $ ConnectionInfo {
+--    host = "localhost",
+--    dbname = "db",
+--    user = "user",
+--    password = "password",
+--    port = "5432"
+--  }
+--getConnectionInfo = do
+--  eConnInfo <- liftIO $ CI.getConnectionInfo
+--  case eConnInfo of
+--    Left err -> throwError err505 { errBody = BLC.pack err }
+--    Right connInfo -> do
+--      conn <- liftIO $ connect ConnectInfo {connectHost = host connInfo
+--                                          ,connectPort = (fromIntegral $ port connInfo)
+--                                          ,connectDatabase = database connInfo
+--                                          ,connectPassword = password connInfo
+--                                          ,connectUser = user connInfo
+--                                          }
 
 -- | ToDO: Use SSL/TLS to enhance security/privacy
 main = (flip catch) handler $ scottyT 3000 id $ do
@@ -69,28 +104,42 @@ main = (flip catch) handler $ scottyT 3000 id $ do
 -- }' http://localhost:3000/registerUser --header "Content-Type:application/json"
   
   post "/registerUser" $ do
-    -- _ <- error "registerUser"
-    -- let result = Data.Aeson.decode body :: Maybe Object
-    -- _ <- liftIO $ putStrLn (show result)
-    -- payload :: UserRegistrationInfo <- liftIO retrievePayload
-    (Object payload) <- liftIO $ readIORef payloadIORef -- payload is of type: Hashmap Text Value
-    let registrationInfo = 
+    -- Note: Read & interpret the incoming payload information from an IORef
+    -- The payload information was saved in the IORef by the authentication middleware
+    payload <- liftIO $ readIORef payloadIORef -- payload is of type: Object. type Object = Hashmap Text Value
+    let mRegistrationInfo = flip parseMaybe payload $ \reg -> do
+          first_name <- reg .: "userRegistrationFirstName"
+          last_name <- reg .: "userRegistrationLastName"
+          phone_number <- reg .: "userRegistrationPhoneNumber"
+          email <- reg .: "userRegistrationEmail"
+          -- public_key <- reg .: "userRegistrationPublicKey"
+          return $ UserRegistrationInfo { 
+                                          userRegistrationFirstName = first_name, 
+                                          userRegistrationLastName = last_name, 
+                                          userRegistrationPhoneNumber = phone_number,
+                                          userRegistrationEmail = email,
+                                          userRegistrationPublicKey = "abc"
+                                        }
 
-    userReq :: UserReq UserRegistrationInfo <- jsonData
-    let registrationInfo = (payload userReq)
-    validation
-      (\errors -> raise $ RegistrationInfoInvalid 1502 $ Prelude.map (\e -> show e) errors) -- ToDO: Writing error code 1502 can lead to mistakes on the part of devs
-      (\newUser -> do
-        _ <- liftAndCatchIO $ putStrLn "Test" --createNewUser userRegistrationInfo
-        Web.Scotty.Trans.json newUser)
-      (validateUserRegistrationInfo registrationInfo)
+    case mRegistrationInfo of
+      Nothing -> let errors = ["An invalid userRegistrationInfo type was passed into this request"]
+                 in raise $ RegistrationInfoInvalid 1502 $ Prelude.map (\e -> show e) errors -- ToDO: Writing error code 1502 can lead to mistakes on the part of devs
 
-
--- data UserReqPayload = UserRegistrationInfo | ListActiveOffers deriving (Show, Eq, Generic)
-
-data ListActiveOffers = ListActiveOffers deriving (Show, Eq, Generic)
-instance FromJSON ListActiveOffers
-instance ToJSON ListActiveOffers
+      Just registrationInfo -> do
+        validation
+         (\errors -> raise $ RegistrationInfoInvalid 1502 $ Prelude.map (\e -> show e) errors) -- ToDO: Writing error code 1502 can lead to mistakes on the part of devs
+         (\newUser -> do
+           -- ToDO: What if there's an exception during DB saving? Or if the saving does not succeed?
+           -- ToDO: What if an exception is thrown in the next lines of code?
+           -- ToDO: Test this with a live database
+           connInfo <- liftAndCatchIO getConnectionInfo
+           let connString = [i|host='#{host connInfo}' dbname='#{dbname connInfo}' user='#{user connInfo}' password='#{password connInfo}' port='#{port connInfo}'|]
+           _ <- liftAndCatchIO $ putStrLn connString
+           conn <- liftAndCatchIO $ PSQL.connectPostgreSQL $ BC.pack connString -- Main.getConnectionInfo
+           _ <- liftAndCatchIO $ createNewUser conn registrationInfo
+           -- If User creation succeeds, send an email + SMS with the confirmation code to the user
+           Web.Scotty.Trans.json newUser)
+         (validateUserRegistrationInfo registrationInfo)
 
 -- ToDO: Can I force a to be of type `ListActiveOffers` or `UserRegistrationInfo`?
 -- ... Can I use a typeclass for that?
